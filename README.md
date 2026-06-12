@@ -4,9 +4,14 @@ A mobile-friendly blackjack game with 3D graphics, built as a single HTML file.
 
 ## Play it
 
-Open `index.html` in any modern browser — phone or desktop. No build step, no
-server, no install. (It loads Three.js from a CDN, so it needs an internet
+**Live: https://olivermadilian.github.io/PersonalApp/**
+
+Or open `index.html` in any modern browser — phone or desktop. No build step,
+no server, no install. (It loads Three.js from a CDN, so it needs an internet
 connection.)
+
+Every push to the development branch is mirrored to `gh-pages` by a GitHub
+Actions workflow, which updates the live site automatically.
 
 ## Features
 
