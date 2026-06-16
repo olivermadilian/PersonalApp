@@ -4,599 +4,579 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Blackjack 3D</title>
+<meta name="theme-color" content="#0e1116">
+<title>Liftr — Workout Tracker</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; background: #0a1612; touch-action: none;
-    font-family: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif; }
-  #scene { position: fixed; inset: 0; }
-  #ui { position: fixed; inset: 0; pointer-events: none; display: flex; flex-direction: column;
-    justify-content: space-between; }
+  :root {
+    --bg: #0e1116; --bg2: #151a21; --card: #181d25; --card2: #1f2630;
+    --line: #283040; --text: #e8edf4; --muted: #8a96a8; --faint: #5d6878;
+    --accent: #b6f24a; --accent-dim: #7fae2e; --danger: #ff6b6b; --blue: #5aa9ff;
+    --radius: 16px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text);
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  body { display: flex; flex-direction: column; min-height: 100vh; overscroll-behavior-y: contain; }
+  button { font-family: inherit; cursor: pointer; border: none; color: inherit; background: none; }
+  input, textarea, select { font-family: inherit; }
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-  /* Top bar */
-  #topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    padding: calc(10px + env(safe-area-inset-top)) 16px 10px; }
-  .stat { background: rgba(8, 20, 15, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(212, 175, 55, 0.35); border-radius: 14px; padding: 7px 14px; color: #f5e9c8;
-    min-width: 104px; text-align: center; }
-  .stat .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c9a94e; }
-  .stat .value { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  #title { color: #d4af37; font-size: 14px; letter-spacing: 4px; font-weight: 600; text-transform: uppercase;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+  /* Header */
+  header { position: sticky; top: 0; z-index: 20; background: rgba(14,17,22,0.82);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
+    padding: calc(12px + env(safe-area-inset-top)) 18px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 19px; letter-spacing: -0.3px; }
+  .brand .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  .brand small { color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
+  #headDate { color: var(--muted); font-size: 13px; font-weight: 600; }
 
-  /* Message banner */
-  #message { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.9);
-    color: #fff; font-size: 26px; font-weight: 800; letter-spacing: 1px; text-align: center;
-    padding: 12px 28px; border-radius: 18px; background: rgba(8, 20, 15, 0.82);
-    border: 1px solid rgba(212, 175, 55, 0.5); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; white-space: nowrap; }
-  #message.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  #message .sub { display: block; font-size: 14px; font-weight: 500; color: #d4af37; margin-top: 4px; letter-spacing: 2px; }
-  #message.win { border-color: #4cd97b; } #message.win .sub { color: #4cd97b; }
-  #message.lose { border-color: #e05656; } #message.lose .sub { color: #e07070; }
+  /* Layout */
+  main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); }
+  .view { display: none; animation: fade 0.25s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .sectionTitle { font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--faint);
+    font-weight: 700; margin: 4px 2px 10px; }
 
-  /* Hand totals */
-  .total-badge { position: absolute; left: 50%; transform: translateX(-50%); color: #f5e9c8;
-    background: rgba(8, 20, 15, 0.7); border: 1px solid rgba(212,175,55,0.3); border-radius: 999px;
-    padding: 3px 14px; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity 0.3s; }
-  .total-badge.show { opacity: 1; }
-  #dealerTotal { top: 16%; } #playerTotal { top: 58%; }
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  .card.tight { padding: 0; overflow: hidden; }
 
-  /* Bottom controls */
-  #controls { padding: 12px 14px calc(16px + env(safe-area-inset-bottom)); display: flex;
-    flex-direction: column; gap: 12px; align-items: center; }
-  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
-  button { pointer-events: auto; border: none; cursor: pointer; color: #fff; font-weight: 700;
-    font-family: inherit; transition: transform 0.08s ease, filter 0.15s ease, opacity 0.2s; user-select: none; -webkit-user-select: none; }
-  button:active { transform: scale(0.94); filter: brightness(1.18); }
-  button:disabled { opacity: 0.35; pointer-events: none; }
+  /* Today summary */
+  .hero { background: linear-gradient(150deg, #1a2230, #141922); border: 1px solid var(--line); }
+  .hero .big { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+  .hero .big b { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .hero .big span { color: var(--muted); font-size: 14px; font-weight: 600; }
+  .statRow { display: flex; gap: 10px; margin-top: 14px; }
+  .stat { flex: 1; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+  .stat .k { color: var(--faint); font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700; }
+  .stat .v { font-size: 20px; font-weight: 800; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 12px; color: var(--muted); font-weight: 600; }
 
-  .chip-btn { width: 58px; height: 58px; border-radius: 50%; font-size: 15px; position: relative;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.55), inset 0 0 0 4px rgba(255,255,255,0.85), inset 0 0 0 7px rgba(0,0,0,0.18); }
-  .chip-5   { background: radial-gradient(circle at 35% 30%, #e25555, #a31f1f); }
-  .chip-25  { background: radial-gradient(circle at 35% 30%, #3fae62, #1c6e38); }
-  .chip-100 { background: radial-gradient(circle at 35% 30%, #4a4a55, #17171f); }
-  .chip-500 { background: radial-gradient(circle at 35% 30%, #b08fe0, #5d3a96); }
+  /* Exercise rows */
+  .exItem { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+  .exItem:last-child { border-bottom: none; }
+  .exItem .info { flex: 1; min-width: 0; }
+  .exItem .name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exItem .sub { color: var(--muted); font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .exItem .vol { color: var(--accent); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .exItem .del { color: var(--faint); font-size: 20px; padding: 4px 6px; line-height: 1; }
+  .exItem .del:active { color: var(--danger); }
 
-  .action-btn { padding: 15px 0; width: 104px; border-radius: 16px; font-size: 16px; letter-spacing: 1.5px;
-    text-transform: uppercase; box-shadow: 0 5px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25); }
-  #btnHit    { background: linear-gradient(160deg, #2fae5e, #157a3c); }
-  #btnStand  { background: linear-gradient(160deg, #d8463c, #97271f); }
-  #btnDouble { background: linear-gradient(160deg, #c9912a, #8a5d12); }
-  #btnDeal   { background: linear-gradient(160deg, #d4af37, #94701a); width: 150px; font-size: 17px; }
-  #btnClear  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); width: 86px; }
-  #btnNew    { background: linear-gradient(160deg, #d4af37, #94701a); width: 180px; padding: 16px 0; border-radius: 16px;
-    font-size: 16px; letter-spacing: 2px; text-transform: uppercase; box-shadow: 0 5px 16px rgba(0,0,0,0.5); }
-  .hidden { display: none !important; }
+  .empty { text-align: center; color: var(--faint); padding: 30px 16px; font-size: 14px; line-height: 1.5; }
+  .empty .ico { font-size: 34px; display: block; margin-bottom: 8px; filter: grayscale(0.2); }
+
+  /* Form */
+  .formGrid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  label.fld { display: block; }
+  label.fld .lab { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 0 0 6px 2px; }
+  input.in, textarea.in, select.in { width: 100%; background: var(--bg2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 12px; padding: 13px 14px; font-size: 16px; font-weight: 600; outline: none; transition: border-color 0.15s; }
+  input.in:focus, textarea.in:focus, select.in:focus { border-color: var(--accent-dim); }
+  textarea.in { resize: vertical; min-height: 70px; font-weight: 500; line-height: 1.45; }
+  .trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* Buttons */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    background: var(--accent); color: #0c1207; font-weight: 800; font-size: 16px; padding: 15px; border-radius: 13px;
+    letter-spacing: 0.2px; transition: transform 0.08s, filter 0.15s; }
+  .btn:active { transform: scale(0.985); filter: brightness(1.05); }
+  .btn.sec { background: var(--card2); color: var(--text); border: 1px solid var(--line); }
+  .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .btn.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,107,107,0.4); }
+  .btn:disabled { opacity: 0.5; pointer-events: none; }
+  .btnRow { display: flex; gap: 10px; margin-top: 10px; }
+
+  /* History */
+  .dayGroup { margin-bottom: 14px; }
+  .dayHead { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; }
+  .dayHead .d { font-weight: 800; font-size: 15px; }
+  .dayHead .m { color: var(--accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Coach */
+  .coachCard { background: linear-gradient(150deg, #1c2433, #15191f); border: 1px solid var(--line); }
+  .sugg { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 11px; background: var(--card); }
+  .sugg .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .sugg .ex { font-weight: 800; font-size: 16px; }
+  .sugg .pres { color: var(--accent); font-weight: 800; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sugg .why { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 7px; }
+  .sugg .add { margin-top: 11px; padding: 9px; font-size: 13px; }
+  .focusPill { display: inline-block; background: rgba(182,242,74,0.13); color: var(--accent); border: 1px solid rgba(182,242,74,0.3);
+    padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+  .spinner { width: 17px; height: 17px; border: 2.5px solid rgba(12,18,7,0.35); border-top-color: #0c1207;
+    border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .coachNote { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+  /* Settings */
+  .setRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .setRow:last-child { border-bottom: none; }
+  .setRow .t { font-weight: 700; font-size: 15px; }
+  .setRow .s { color: var(--muted); font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+  .seg { display: flex; background: var(--bg2); border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+  .seg button { padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--muted); }
+  .seg button.on { background: var(--accent); color: #0c1207; }
+  a.link { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .pwHint { font-size: 12px; color: var(--faint); margin-top: 7px; line-height: 1.5; }
+
+  /* Toast */
+  #toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--card2); border: 1px solid var(--line); color: var(--text); padding: 11px 18px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s; z-index: 50; max-width: 88%; text-align: center; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err { border-color: rgba(255,107,107,0.5); }
+
+  /* Bottom nav */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex;
+    background: rgba(14,17,22,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--line); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  nav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; color: var(--faint); }
+  nav button .ic { font-size: 21px; line-height: 1; }
+  nav button .tx { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; }
+  nav button.on { color: var(--accent); }
 </style>
 </head>
 <body>
-<canvas id="scene"></canvas>
+<header>
+  <div class="brand"><span class="dot"></span>Liftr <small id="headTag">Tracker</small></div>
+  <div id="headDate"></div>
+</header>
 
-<div id="ui">
-  <div id="topbar">
-    <div class="stat"><div class="label">Balance</div><div class="value" id="balanceVal">$500</div></div>
-    <div id="title">♠ Blackjack ♦</div>
-    <div class="stat"><div class="label">Bet</div><div class="value" id="betVal">$0</div></div>
-  </div>
+<main>
+  <!-- ===================== LOG ===================== -->
+  <section class="view active" id="view-log">
+    <div class="card hero">
+      <div class="big"><b id="todayVol">0</b><span id="todayUnit">lb volume today</span></div>
+      <div class="statRow">
+        <div class="stat"><div class="k">Exercises</div><div class="v" id="todayEx">0</div></div>
+        <div class="stat"><div class="k">Sets</div><div class="v" id="todaySets">0</div></div>
+        <div class="stat"><div class="k">Reps</div><div class="v" id="todayReps">0</div></div>
+      </div>
+    </div>
 
-  <div id="dealerTotal" class="total-badge">Dealer: 0</div>
-  <div id="playerTotal" class="total-badge">You: 0</div>
-  <div id="message"><span id="msgMain"></span><span class="sub" id="msgSub"></span></div>
+    <div class="sectionTitle">Today's session</div>
+    <div class="card tight" id="todayList"></div>
 
-  <div id="controls">
-    <div class="row" id="betRow">
-      <button class="chip-btn chip-5" data-chip="5">$5</button>
-      <button class="chip-btn chip-25" data-chip="25">$25</button>
-      <button class="chip-btn chip-100" data-chip="100">$100</button>
-      <button class="chip-btn chip-500" data-chip="500">$500</button>
+    <div class="sectionTitle">Add exercise</div>
+    <div class="card">
+      <div class="formGrid">
+        <label class="fld"><div class="lab">Movement</div>
+          <input class="in" id="inName" list="exList" placeholder="e.g. Back Squat" autocomplete="off"></label>
+        <datalist id="exList"></datalist>
+        <div class="trio">
+          <label class="fld"><div class="lab">Weight</div>
+            <input class="in" id="inWeight" type="number" inputmode="decimal" placeholder="0" min="0" step="2.5"></label>
+          <label class="fld"><div class="lab">Reps</div>
+            <input class="in" id="inReps" type="number" inputmode="numeric" placeholder="0" min="0"></label>
+          <label class="fld"><div class="lab">Sets</div>
+            <input class="in" id="inSets" type="number" inputmode="numeric" placeholder="0" min="0" value="3"></label>
+        </div>
+      </div>
+      <div class="btnRow"><button class="btn" id="addBtn">+ Add to session</button></div>
     </div>
-    <div class="row" id="dealRow">
-      <button id="btnClear" class="action-btn">Clear</button>
-      <button id="btnDeal" class="action-btn">Deal</button>
-    </div>
-    <div class="row hidden" id="playRow">
-      <button id="btnHit" class="action-btn">Hit</button>
-      <button id="btnStand" class="action-btn">Stand</button>
-      <button id="btnDouble" class="action-btn">Double</button>
-    </div>
-    <div class="row hidden" id="newRow">
-      <button id="btnNew">New Hand</button>
-    </div>
-  </div>
-</div>
+  </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+  <!-- ===================== HISTORY ===================== -->
+  <section class="view" id="view-history">
+    <div class="sectionTitle">History</div>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- ===================== COACH ===================== -->
+  <section class="view" id="view-coach">
+    <div class="card coachCard">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px;">
+        <span style="font-size:20px;">🤖</span>
+        <div style="font-weight:800;font-size:17px;">AI Coach</div>
+      </div>
+      <div class="coachNote">Claude Sonnet 4.6 reviews your recent training and suggests movements, weights, and reps for your next session.</div>
+      <label class="fld" style="margin-top:14px;"><div class="lab">Goals / notes (optional)</div>
+        <textarea class="in" id="coachGoals" placeholder="e.g. building lower-body strength, left shoulder is tender, 45 min cap"></textarea></label>
+      <div class="btnRow"><button class="btn" id="coachBtn">Get suggestions</button></div>
+    </div>
+    <div id="coachOut"></div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section class="view" id="view-settings">
+    <div class="sectionTitle">Preferences</div>
+    <div class="card">
+      <div class="setRow">
+        <div><div class="t">Units</div><div class="s">Used for logging and AI suggestions</div></div>
+        <div class="seg" id="unitSeg">
+          <button data-unit="lb">lb</button><button data-unit="kg">kg</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">AI Coach</div>
+    <div class="card">
+      <label class="fld"><div class="lab">Anthropic API key</div>
+        <input class="in" id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"></label>
+      <div class="pwHint">Stored only in this browser (localStorage) and sent directly to Anthropic when you request suggestions — it never touches any other server. Use this on your own device only. Get a key at <a class="link" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.</div>
+      <div class="btnRow"><button class="btn sec" id="saveKey">Save key</button></div>
+    </div>
+
+    <div class="sectionTitle">Your data</div>
+    <div class="card">
+      <div class="setRow">
+        <div><div class="t">Export</div><div class="s">Download all workouts as JSON</div></div>
+        <button class="btn ghost" style="width:auto;padding:10px 16px;" id="exportBtn">Export</button>
+      </div>
+      <div class="setRow">
+        <div><div class="t">Import</div><div class="s">Restore from a JSON backup</div></div>
+        <button class="btn ghost" style="width:auto;padding:10px 16px;" id="importBtn">Import</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+      <div class="setRow">
+        <div><div class="t">Apple Health</div><div class="s">Direct sync needs a native iOS app; export your data here to bring it in via Shortcuts later.</div></div>
+      </div>
+      <div class="btnRow"><button class="btn danger" id="clearBtn">Clear all data</button></div>
+    </div>
+    <div class="empty" style="padding:14px;">Liftr · single-file workout tracker · data stays on your device</div>
+  </section>
+</main>
+
+<nav id="nav">
+  <button data-tab="log" class="on"><span class="ic">🏋️</span><span class="tx">Log</span></button>
+  <button data-tab="history"><span class="ic">📅</span><span class="tx">History</span></button>
+  <button data-tab="coach"><span class="ic">🤖</span><span class="tx">Coach</span></button>
+  <button data-tab="settings"><span class="ic">⚙️</span><span class="tx">Settings</span></button>
+</nav>
+
+<div id="toast"></div>
+
 <script>
 'use strict';
-/* ============================== 3D SCENE ============================== */
-const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07120d);
-scene.fog = new THREE.Fog(0x07120d, 14, 26);
-
-const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 60);
-function layoutCamera() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  // Pull the camera back further on narrow (portrait) screens so the table fits.
-  const portrait = h > w;
-  camera.position.set(0, portrait ? 8.6 : 6.6, portrait ? 7.4 : 6.4);
-  camera.lookAt(0, 0, 0.4);
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', layoutCamera);
-
-scene.add(new THREE.AmbientLight(0xfff4e0, 0.55));
-const keyLight = new THREE.DirectionalLight(0xfff2d8, 1.15);
-keyLight.position.set(-3, 9, 4);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
-keyLight.shadow.camera.left = -7; keyLight.shadow.camera.right = 7;
-keyLight.shadow.camera.top = 7; keyLight.shadow.camera.bottom = -7;
-scene.add(keyLight);
-const rimLight = new THREE.PointLight(0x88ddff, 0.35, 30);
-rimLight.position.set(4, 5, -6);
-scene.add(rimLight);
-
-/* ---- Table felt with painted markings ---- */
-function makeFeltTexture() {
-  const c = document.createElement('canvas'); c.width = c.height = 1024;
-  const g = c.getContext('2d');
-  const grad = g.createRadialGradient(512, 460, 80, 512, 512, 640);
-  grad.addColorStop(0, '#1d7a4c'); grad.addColorStop(0.7, '#10573a'); grad.addColorStop(1, '#0a3d28');
-  g.fillStyle = grad; g.fillRect(0, 0, 1024, 1024);
-  // subtle felt noise
-  for (let i = 0; i < 9000; i++) {
-    g.fillStyle = 'rgba(255,255,255,' + (Math.random() * 0.025) + ')';
-    g.fillRect(Math.random() * 1024, Math.random() * 1024, 1.4, 1.4);
-  }
-  g.strokeStyle = 'rgba(244, 226, 170, 0.65)'; g.lineWidth = 5;
-  g.beginPath(); g.arc(512, 410, 330, Math.PI * 0.15, Math.PI * 0.85); g.stroke();
-  g.beginPath(); g.arc(512, 410, 290, Math.PI * 0.18, Math.PI * 0.82); g.stroke();
-  g.fillStyle = 'rgba(244, 226, 170, 0.75)';
-  g.font = '600 34px Georgia, serif'; g.textAlign = 'center';
-  g.save(); g.translate(512, 760); g.fillText('BLACKJACK PAYS 3 TO 2', 0, 0);
-  g.font = '500 24px Georgia, serif';
-  g.fillText('DEALER STANDS ON 17', 0, 42); g.restore();
-  const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 4;
-  return tex;
-}
-const table = new THREE.Mesh(
-  new THREE.CylinderGeometry(7.2, 7.2, 0.3, 64),
-  new THREE.MeshStandardMaterial({ map: makeFeltTexture(), roughness: 0.95 })
-);
-table.position.y = -0.15;
-table.receiveShadow = true;
-scene.add(table);
-
-const rim = new THREE.Mesh(
-  new THREE.TorusGeometry(7.2, 0.32, 18, 80),
-  new THREE.MeshStandardMaterial({ color: 0x4a2c14, roughness: 0.5, metalness: 0.15 })
-);
-rim.rotation.x = Math.PI / 2;
-rim.position.y = 0.02;
-rim.castShadow = true;
-scene.add(rim);
-
-/* ---- Card textures ---- */
-const SUITS = ['♠', '♥', '♦', '♣'];
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-const texCache = {};
-function roundRect(g, x, y, w, h, r) {
-  g.beginPath();
-  g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
-}
-function cardFaceTexture(rank, suit) {
-  const key = rank + suit;
-  if (texCache[key]) return texCache[key];
-  const c = document.createElement('canvas'); c.width = 256; c.height = 360;
-  const g = c.getContext('2d');
-  g.fillStyle = '#f7f5ee'; roundRect(g, 0, 0, 256, 360, 22); g.fill();
-  g.strokeStyle = '#d8d2c2'; g.lineWidth = 3; roundRect(g, 4, 4, 248, 352, 18); g.stroke();
-  const red = suit === '♥' || suit === '♦';
-  g.fillStyle = red ? '#c0392b' : '#1d2330';
-  g.textAlign = 'center';
-  g.font = '700 64px Georgia, serif';
-  g.fillText(rank, rank === '10' ? 48 : 38, 70);
-  g.font = '54px Georgia, serif';
-  g.fillText(suit, rank === '10' ? 48 : 38, 124);
-  g.font = '150px Georgia, serif';
-  g.fillText(suit, 128, 235);
-  g.save(); g.translate(256 - 38, 360 - 24); g.rotate(Math.PI);
-  g.font = '700 64px Georgia, serif'; g.fillText(rank, rank === '10' ? -10 : 0, 0);
-  g.font = '54px Georgia, serif'; g.fillText(suit, rank === '10' ? -10 : 0, 54);
-  g.restore();
-  const tex = new THREE.CanvasTexture(c);
-  texCache[key] = tex;
-  return tex;
-}
-function cardBackTexture() {
-  if (texCache.back) return texCache.back;
-  const c = document.createElement('canvas'); c.width = 256; c.height = 360;
-  const g = c.getContext('2d');
-  g.fillStyle = '#f7f5ee'; roundRect(g, 0, 0, 256, 360, 22); g.fill();
-  g.fillStyle = '#7a1f1f'; roundRect(g, 14, 14, 228, 332, 14); g.fill();
-  g.strokeStyle = '#d4af37'; g.lineWidth = 3; roundRect(g, 24, 24, 208, 312, 10); g.stroke();
-  g.strokeStyle = 'rgba(212, 175, 55, 0.55)'; g.lineWidth = 1.5;
-  for (let i = -360; i < 360; i += 22) {
-    g.beginPath(); g.moveTo(i, 24); g.lineTo(i + 312, 336); g.stroke();
-    g.beginPath(); g.moveTo(i + 312, 24); g.lineTo(i, 336); g.stroke();
-  }
-  g.fillStyle = '#d4af37'; g.font = '64px Georgia, serif'; g.textAlign = 'center';
-  g.beginPath(); g.arc(128, 180, 46, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#7a1f1f'; g.fillText('♠', 128, 203);
-  texCache.back = new THREE.CanvasTexture(c);
-  return texCache.back;
-}
-
-/* ---- Card meshes ---- */
-const CARD_W = 0.82, CARD_H = 1.15, CARD_T = 0.012;
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.8 });
-const backMat = new THREE.MeshStandardMaterial({ map: cardBackTexture(), roughness: 0.6 });
-const cardGeo = new THREE.BoxGeometry(CARD_W, CARD_H, CARD_T);
-
-function createCard3D(rank, suit) {
-  const faceMat = new THREE.MeshStandardMaterial({ map: cardFaceTexture(rank, suit), roughness: 0.6 });
-  // box faces: +x,-x,+y,-y,+z(face),-z(back)
-  const mesh = new THREE.Mesh(cardGeo, [edgeMat, edgeMat, edgeMat, edgeMat, faceMat, backMat]);
-  mesh.rotation.x = -Math.PI / 2; // lie flat, face up
-  mesh.castShadow = true;
-  const holder = new THREE.Group();
-  holder.add(mesh);
-  scene.add(holder);
-  return holder;
-}
-
-/* ---- Deck pile ---- */
-const deckPos = new THREE.Vector3(2.9, 0.16, -2.1);
-const deckPile = new THREE.Mesh(
-  new THREE.BoxGeometry(CARD_W, 0.3, CARD_H),
-  [edgeMat, edgeMat, backMat, edgeMat, edgeMat, edgeMat]
-);
-deckPile.position.copy(deckPos);
-deckPile.rotation.y = -0.35;
-deckPile.castShadow = true;
-scene.add(deckPile);
-
-/* ---- Bet chips on the table ---- */
-const chipColors = { 5: 0xb02828, 25: 0x1f7a40, 100: 0x23232d, 500: 0x6b46a8 };
-const chipGroup = new THREE.Group();
-chipGroup.position.set(0, 0, 0.55);
-scene.add(chipGroup);
-const chipGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.07, 28);
-function chipTexture(colorHex) {
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const g = c.getContext('2d');
-  g.fillStyle = '#' + colorHex.toString(16).padStart(6, '0');
-  g.fillRect(0, 0, 128, 128);
-  g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 7;
-  for (let a = 0; a < 8; a++) {
-    g.beginPath();
-    g.arc(64, 64, 56, a * Math.PI / 4, a * Math.PI / 4 + 0.28);
-    g.stroke();
-  }
-  g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 3;
-  g.beginPath(); g.arc(64, 64, 38, 0, Math.PI * 2); g.stroke();
-  return new THREE.CanvasTexture(c);
-}
-const chipMats = {};
-for (const v in chipColors) {
-  const top = new THREE.MeshStandardMaterial({ map: chipTexture(chipColors[v]), roughness: 0.45 });
-  const side = new THREE.MeshStandardMaterial({ color: chipColors[v], roughness: 0.45 });
-  chipMats[v] = [side, top, top];
-}
-function updateBetChips(amount) {
-  while (chipGroup.children.length) chipGroup.remove(chipGroup.children[0]);
-  let rem = amount, col = 0;
-  for (const v of [500, 100, 25, 5]) {
-    const n = Math.floor(rem / v); rem -= n * v;
-    if (!n) continue;
-    for (let i = 0; i < Math.min(n, 8); i++) {
-      const chip = new THREE.Mesh(chipGeo, chipMats[v]);
-      chip.position.set((col - 0.8) * 0.72 + (Math.random() - 0.5) * 0.04,
-        0.045 + i * 0.075, (Math.random() - 0.5) * 0.04);
-      chip.rotation.y = Math.random() * Math.PI;
-      chip.castShadow = true;
-      chipGroup.add(chip);
-    }
-    col++;
-  }
-}
-
-/* ---- Tweens ---- */
-const tweens = [];
-const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-function tween(obj, to, dur, done) {
-  const from = {};
-  for (const k in to) from[k] = obj[k];
-  tweens.push({ obj, from, to, t0: performance.now(), dur, done });
-}
-function stepTweens(now) {
-  for (let i = tweens.length - 1; i >= 0; i--) {
-    const tw = tweens[i];
-    let t = Math.min((now - tw.t0) / tw.dur, 1);
-    const e = easeOutCubic(t);
-    for (const k in tw.to) tw.obj[k] = tw.from[k] + (tw.to[k] - tw.from[k]) * e;
-    if (t === 1) { tweens.splice(i, 1); if (tw.done) tw.done(); }
-  }
-}
-const delay = ms => new Promise(r => setTimeout(r, ms));
-function tweenP(obj, to, dur) { return new Promise(r => tween(obj, to, dur, r)); }
-
-function renderLoop(now) {
-  stepTweens(now);
-  renderer.render(scene, camera);
-  requestAnimationFrame(renderLoop);
-}
-layoutCamera();
-requestAnimationFrame(renderLoop);
-
-/* ============================== GAME LOGIC ============================== */
-const ui = {
-  balance: document.getElementById('balanceVal'),
-  bet: document.getElementById('betVal'),
-  msg: document.getElementById('message'),
-  msgMain: document.getElementById('msgMain'),
-  msgSub: document.getElementById('msgSub'),
-  dealerTotal: document.getElementById('dealerTotal'),
-  playerTotal: document.getElementById('playerTotal'),
-  betRow: document.getElementById('betRow'),
-  dealRow: document.getElementById('dealRow'),
-  playRow: document.getElementById('playRow'),
-  newRow: document.getElementById('newRow'),
-  hit: document.getElementById('btnHit'),
-  stand: document.getElementById('btnStand'),
-  dbl: document.getElementById('btnDouble'),
-  deal: document.getElementById('btnDeal'),
-  clear: document.getElementById('btnClear'),
-  newHand: document.getElementById('btnNew'),
+/* ============================ STORE ============================ */
+const LS = {
+  workouts: 'liftr_workouts',
+  unit: 'liftr_unit',
+  key: 'liftr_apikey',
 };
+const MODEL = 'claude-sonnet-4-6';
 
-let balance = Number(localStorage.getItem('bj_balance')) || 500;
-if (balance < 5) balance = 500;
-let bet = 0;
-let deck = [];
-let playerCards = [], dealerCards = []; // {rank, suit, holder}
-let phase = 'betting'; // betting | dealing | player | dealer | over
-let busy = false;
+let workouts = load(LS.workouts, []);     // [{id, date, entries:[{id,name,weight,reps,sets}]}]
+let unit = localStorage.getItem(LS.unit) || 'lb';
 
-const PLAYER_Z = 1.95, DEALER_Z = -1.6;
+function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } }
+function saveWorkouts() { localStorage.setItem(LS.workouts, JSON.stringify(workouts)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-function saveBalance() { localStorage.setItem('bj_balance', String(balance)); }
-function fmt(n) { return '$' + n.toLocaleString(); }
-function refreshHud() {
-  ui.balance.textContent = fmt(balance);
-  ui.bet.textContent = fmt(bet);
+function todayStr() {
+  const d = new Date();
+  const t = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return t.toISOString().slice(0, 10);
 }
-function showMessage(main, sub, cls) {
-  ui.msgMain.textContent = main;
-  ui.msgSub.textContent = sub || '';
-  ui.msg.className = 'show' + (cls ? ' ' + cls : '');
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const t = todayStr();
+  if (iso === t) return 'Today';
+  const yd = new Date(); yd.setDate(yd.getDate() - 1);
+  const ydStr = new Date(yd.getTime() - yd.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  if (iso === ydStr) return 'Yesterday';
+  return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
-function hideMessage() { ui.msg.className = ''; }
-function setRows(...rows) {
-  for (const r of [ui.betRow, ui.dealRow, ui.playRow, ui.newRow])
-    r.classList.toggle('hidden', !rows.includes(r));
+function entryVolume(e) { return (e.weight || 0) * (e.reps || 0) * (e.sets || 0); }
+function workoutVolume(w) { return w.entries.reduce((s, e) => s + entryVolume(e), 0); }
+function num(n) { return Math.round(n).toLocaleString(); }
+
+function getToday() {
+  let w = workouts.find(w => w.date === todayStr());
+  if (!w) { w = { id: uid(), date: todayStr(), entries: [] }; workouts.unshift(w); }
+  return w;
 }
 
-function buildDeck() {
-  deck = [];
-  for (const suit of SUITS) for (const rank of RANKS) deck.push({ rank, suit });
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+/* ============================ UI: LOG ============================ */
+const $ = s => document.querySelector(s);
+const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+
+function renderToday() {
+  const w = workouts.find(w => w.date === todayStr());
+  const entries = w ? w.entries : [];
+  const list = $('#todayList');
+  list.innerHTML = '';
+  if (!entries.length) {
+    list.appendChild(el('div', 'empty', '<span class="ico">💪</span>No exercises yet.<br>Log your first movement below.'));
+  } else {
+    entries.forEach(e => {
+      const row = el('div', 'exItem');
+      const wTxt = e.weight > 0 ? `${e.weight} ${unit}` : 'Bodyweight';
+      row.innerHTML = `<div class="info">
+          <div class="name">${esc(e.name)}</div>
+          <div class="sub">${e.sets} × ${e.reps} · ${wTxt}</div>
+        </div>
+        <div class="vol">${num(entryVolume(e))}</div>
+        <button class="del" aria-label="Remove">×</button>`;
+      row.querySelector('.del').onclick = () => { w.entries = w.entries.filter(x => x.id !== e.id); saveWorkouts(); refresh(); };
+      list.appendChild(row);
+    });
   }
+  // hero stats
+  const vol = entries.reduce((s, e) => s + entryVolume(e), 0);
+  const sets = entries.reduce((s, e) => s + (e.sets || 0), 0);
+  const reps = entries.reduce((s, e) => s + (e.sets || 0) * (e.reps || 0), 0);
+  $('#todayVol').textContent = num(vol);
+  $('#todayUnit').textContent = `${unit} volume today`;
+  $('#todayEx').textContent = entries.length;
+  $('#todaySets').textContent = sets;
+  $('#todayReps').textContent = reps;
 }
 
-function handValue(cards) {
-  let total = 0, aces = 0;
-  for (const c of cards) {
-    if (c.rank === 'A') { total += 11; aces++; }
-    else if ('JQK'.includes(c.rank)) total += 10;
-    else total += Number(c.rank);
-  }
-  while (total > 21 && aces > 0) { total -= 10; aces--; }
-  return { total, soft: aces > 0 };
-}
-const isBlackjack = cards => cards.length === 2 && handValue(cards).total === 21;
-
-function updateTotals(revealDealer) {
-  const p = handValue(playerCards).total;
-  ui.playerTotal.textContent = 'You: ' + p;
-  ui.playerTotal.classList.toggle('show', playerCards.length > 0);
-  let d;
-  if (revealDealer) d = handValue(dealerCards).total;
-  else d = dealerCards.length ? handValue([dealerCards[0]]).total + ' + ?' : 0;
-  ui.dealerTotal.textContent = 'Dealer: ' + d;
-  ui.dealerTotal.classList.toggle('show', dealerCards.length > 0);
+function addExercise() {
+  const name = $('#inName').value.trim();
+  const weight = parseFloat($('#inWeight').value) || 0;
+  const reps = parseInt($('#inReps').value) || 0;
+  const sets = parseInt($('#inSets').value) || 0;
+  if (!name) return toast('Enter a movement name', true);
+  if (!reps || !sets) return toast('Add reps and sets', true);
+  getToday().entries.push({ id: uid(), name, weight, reps, sets });
+  saveWorkouts();
+  $('#inName').value = ''; $('#inWeight').value = ''; $('#inReps').value = '';
+  $('#inSets').value = '3'; $('#inName').focus();
+  refresh();
+  toast('Added ✓');
 }
 
-function slotX(i, n) { return (i - (n - 1) / 2) * (CARD_W * 0.78); }
-
-async function dealCard(toCards, z, faceDown) {
-  const cardData = deck.pop();
-  const holder = createCard3D(cardData.rank, cardData.suit);
-  cardData.holder = holder;
-  holder.position.copy(deckPos);
-  holder.rotation.x = Math.PI; // start face down on the pile
-  holder.rotation.y = -0.35;
-  toCards.push(cardData);
-  // re-layout the whole hand
-  const n = toCards.length;
-  for (let i = 0; i < n - 1; i++)
-    tween(toCards[i].holder.position, { x: slotX(i, n) }, 260);
-  const i = n - 1;
-  const y = 0.02 + i * 0.005;
-  tween(holder.position, { x: slotX(i, n), y, z }, 380);
-  tween(holder.rotation, { y: (Math.random() - 0.5) * 0.06 }, 380);
-  if (!faceDown) {
-    // flip up mid-flight
-    tween(holder.rotation, { x: 0 }, 380);
-  }
-  await delay(420);
-}
-
-async function revealHoleCard() {
-  const holder = dealerCards[1].holder;
-  tween(holder.position, { y: 0.6 }, 200);
-  await delay(190);
-  tween(holder.rotation, { x: 0 }, 300);
-  tween(holder.position, { y: 0.025 }, 320);
-  await delay(360);
-}
-
-function clearTable() {
-  for (const c of [...playerCards, ...dealerCards]) scene.remove(c.holder);
-  playerCards = []; dealerCards = [];
-  updateBetChips(0);
-  updateTotals(false);
-}
-
-/* ---- Betting ---- */
-for (const btn of ui.betRow.querySelectorAll('.chip-btn')) {
-  btn.addEventListener('click', () => {
-    const v = Number(btn.dataset.chip);
-    if (phase !== 'betting' || bet + v > balance) return;
-    bet += v;
-    updateBetChips(bet);
-    refreshHud();
-    hideMessage();
-  });
-}
-ui.clear.addEventListener('click', () => {
-  if (phase !== 'betting') return;
-  bet = 0; updateBetChips(0); refreshHud();
-});
-
-ui.deal.addEventListener('click', async () => {
-  if (phase !== 'betting' || busy) return;
-  if (bet === 0) { showMessage('Place a bet', 'Tap a chip below'); setTimeout(hideMessage, 1400); return; }
-  busy = true;
-  phase = 'dealing';
-  balance -= bet; saveBalance(); refreshHud();
-  hideMessage();
-  setRows();
-  buildDeck();
-  await dealCard(playerCards, PLAYER_Z, false); updateTotals(false);
-  await dealCard(dealerCards, DEALER_Z, false); updateTotals(false);
-  await dealCard(playerCards, PLAYER_Z, false); updateTotals(false);
-  await dealCard(dealerCards, DEALER_Z, true); updateTotals(false);
-  busy = false;
-
-  if (isBlackjack(playerCards) || isBlackjack(dealerCards)) {
-    await settle();
+/* ============================ UI: HISTORY ============================ */
+function renderHistory() {
+  const box = $('#historyList');
+  box.innerHTML = '';
+  const past = [...workouts].filter(w => w.entries.length).sort((a, b) => b.date.localeCompare(a.date));
+  if (!past.length) {
+    box.appendChild(el('div', 'empty', '<span class="ico">📅</span>No sessions logged yet.<br>Your workout history will appear here.'));
     return;
   }
-  phase = 'player';
-  ui.dbl.disabled = balance < bet;
-  setRows(ui.playRow);
-});
-
-/* ---- Player actions ---- */
-ui.hit.addEventListener('click', async () => {
-  if (phase !== 'player' || busy) return;
-  busy = true;
-  await dealCard(playerCards, PLAYER_Z, false);
-  updateTotals(false);
-  ui.dbl.disabled = true;
-  busy = false;
-  const { total } = handValue(playerCards);
-  if (total > 21) await settle();
-  else if (total === 21) await dealerPlay();
-});
-
-ui.stand.addEventListener('click', () => {
-  if (phase !== 'player' || busy) return;
-  dealerPlay();
-});
-
-ui.dbl.addEventListener('click', async () => {
-  if (phase !== 'player' || busy || playerCards.length !== 2 || balance < bet) return;
-  busy = true;
-  balance -= bet; bet *= 2;
-  saveBalance(); refreshHud(); updateBetChips(bet);
-  await dealCard(playerCards, PLAYER_Z, false);
-  updateTotals(false);
-  busy = false;
-  if (handValue(playerCards).total > 21) await settle();
-  else await dealerPlay();
-});
-
-async function dealerPlay() {
-  phase = 'dealer';
-  busy = true;
-  setRows();
-  await revealHoleCard();
-  updateTotals(true);
-  while (handValue(dealerCards).total < 17) {
-    await delay(450);
-    await dealCard(dealerCards, DEALER_Z, false);
-    updateTotals(true);
-  }
-  busy = false;
-  await settle();
+  past.forEach(w => {
+    const g = el('div', 'dayGroup');
+    const head = el('div', 'dayHead');
+    head.innerHTML = `<div class="d">${fmtDate(w.date)}</div><div class="m">${num(workoutVolume(w))} ${unit} · ${w.entries.length} ex</div>`;
+    g.appendChild(head);
+    const card = el('div', 'card tight');
+    w.entries.forEach(e => {
+      const wTxt = e.weight > 0 ? `${e.weight} ${unit}` : 'BW';
+      const row = el('div', 'exItem');
+      row.innerHTML = `<div class="info"><div class="name">${esc(e.name)}</div>
+        <div class="sub">${e.sets} × ${e.reps} · ${wTxt}</div></div>
+        <div class="vol">${num(entryVolume(e))}</div>`;
+      card.appendChild(row);
+    });
+    g.appendChild(card);
+    box.appendChild(g);
+  });
 }
 
-async function settle() {
-  phase = 'over';
-  busy = true;
-  setRows();
-  // make sure the hole card is face up
-  if (dealerCards.length > 1 && Math.abs(dealerCards[1].holder.rotation.x) > 0.1) {
-    await revealHoleCard();
-  }
-  updateTotals(true);
-  const p = handValue(playerCards).total;
-  const d = handValue(dealerCards).total;
-  const pBJ = isBlackjack(playerCards), dBJ = isBlackjack(dealerCards);
-  let payout = 0, main, sub, cls;
-
-  if (pBJ && dBJ)            { payout = bet;            main = 'Push';        sub = 'Both blackjack'; }
-  else if (pBJ)              { payout = bet * 2.5;      main = 'Blackjack!';  sub = '+' + fmt(bet * 1.5); cls = 'win'; }
-  else if (dBJ)              { payout = 0;              main = 'Dealer Blackjack'; sub = '-' + fmt(bet); cls = 'lose'; }
-  else if (p > 21)           { payout = 0;              main = 'Bust!';       sub = '-' + fmt(bet); cls = 'lose'; }
-  else if (d > 21)           { payout = bet * 2;        main = 'Dealer Busts!'; sub = '+' + fmt(bet); cls = 'win'; }
-  else if (p > d)            { payout = bet * 2;        main = 'You Win!';    sub = '+' + fmt(bet); cls = 'win'; }
-  else if (p < d)            { payout = 0;              main = 'Dealer Wins'; sub = '-' + fmt(bet); cls = 'lose'; }
-  else                       { payout = bet;            main = 'Push';        sub = 'Bet returned'; }
-
-  balance += payout;
-  saveBalance();
-  await delay(350);
-  refreshHud();
-  showMessage(main, sub, cls);
-  busy = false;
-  if (balance < 5) {
-    await delay(1200);
-    showMessage('Out of chips!', 'Here’s a fresh $500 on the house', 'win');
-    balance = 500; saveBalance(); refreshHud();
-  }
-  setRows(ui.newRow);
+function refreshDatalist() {
+  const names = [...new Set(workouts.flatMap(w => w.entries.map(e => e.name)))];
+  const dl = $('#exList');
+  dl.innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
 }
 
-ui.newHand.addEventListener('click', () => {
-  if (phase !== 'over' || busy) return;
-  clearTable();
-  bet = 0;
-  hideMessage();
-  refreshHud();
-  phase = 'betting';
-  setRows(ui.betRow, ui.dealRow);
-});
+/* ============================ COACH (Claude Sonnet 4.6) ============================ */
+function historyForPrompt() {
+  const recent = [...workouts].filter(w => w.entries.length).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+  if (!recent.length) return '(no workouts logged yet — suggest a sensible balanced starting session)';
+  return recent.map(w => {
+    const lines = w.entries.map(e => `  - ${e.name}: ${e.sets}×${e.reps} @ ${e.weight > 0 ? e.weight + unit : 'bodyweight'}`).join('\n');
+    return `${w.date}:\n${lines}`;
+  }).join('\n');
+}
 
-refreshHud();
-updateTotals(false);
-setRows(ui.betRow, ui.dealRow);
+const SUGGEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    focus: { type: 'string', description: 'Short label for the suggested session focus, e.g. "Lower body strength"' },
+    suggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          exercise: { type: 'string' },
+          sets: { type: 'integer' },
+          reps: { type: 'integer' },
+          weight: { type: 'number', description: 'Suggested working weight in the user unit; 0 for bodyweight' },
+          rationale: { type: 'string', description: 'One concise sentence on why' }
+        },
+        required: ['exercise', 'sets', 'reps', 'weight', 'rationale'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['focus', 'suggestions'],
+  additionalProperties: false
+};
+
+async function getSuggestions() {
+  const key = (localStorage.getItem(LS.key) || '').trim();
+  const out = $('#coachOut');
+  if (!key) {
+    out.innerHTML = '';
+    out.appendChild(el('div', 'card', '<div class="coachNote">Add your Anthropic API key in <b>Settings</b> to enable AI suggestions.</div>'));
+    switchTab('settings');
+    toast('Add your API key first', true);
+    return;
+  }
+  const btn = $('#coachBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Thinking…';
+  out.innerHTML = '';
+
+  const goals = $('#coachGoals').value.trim();
+  const system = `You are an elite strength & conditioning coach. Based on the athlete's recent training history, suggest their next workout: 4-6 exercises with concrete sets, reps, and working weights. Apply progressive overload sensibly from what they last lifted, balance muscle groups across the week, respect any stated goals or injuries, and include at least one fresh movement variation when appropriate. All weights are in ${unit}. Keep rationales to one short sentence.`;
+  const userMsg = `Recent training history (most recent first):\n${historyForPrompt()}\n\nGoals / notes: ${goals || 'none provided'}\n\nSuggest the next session.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1024,
+        thinking: { type: 'disabled' },
+        system,
+        messages: [{ role: 'user', content: userMsg }],
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: SUGGEST_SCHEMA } }
+      })
+    });
+
+    if (!res.ok) {
+      let msg = `Request failed (${res.status})`;
+      try { const e = await res.json(); if (e.error?.message) msg = e.error.message; } catch {}
+      if (res.status === 401) msg = 'Invalid API key — check it in Settings.';
+      if (res.status === 429) msg = 'Rate limited — wait a moment and try again.';
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.stop_reason === 'refusal') throw new Error('The model declined this request.');
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    const parsed = JSON.parse(textBlock.text);
+    renderSuggestions(parsed);
+  } catch (err) {
+    out.appendChild(el('div', 'card', `<div class="coachNote" style="color:var(--danger)">⚠ ${esc(err.message || 'Something went wrong')}</div>`));
+    toast(err.message || 'Failed', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Get suggestions';
+  }
+}
+
+function renderSuggestions(data) {
+  const out = $('#coachOut');
+  out.innerHTML = '';
+  const head = el('div', '');
+  head.innerHTML = `<div class="focusPill">🎯 ${esc(data.focus || 'Next session')}</div>`;
+  out.appendChild(head);
+
+  (data.suggestions || []).forEach(s => {
+    const card = el('div', 'sugg');
+    const wTxt = s.weight > 0 ? `${s.weight} ${unit}` : 'BW';
+    card.innerHTML = `<div class="top">
+        <div class="ex">${esc(s.exercise)}</div>
+        <div class="pres">${s.sets}×${s.reps} · ${wTxt}</div>
+      </div>
+      <div class="why">${esc(s.rationale || '')}</div>
+      <button class="btn sec add">+ Add to today</button>`;
+    card.querySelector('.add').onclick = () => {
+      getToday().entries.push({ id: uid(), name: s.exercise, weight: s.weight || 0, reps: s.reps || 0, sets: s.sets || 0 });
+      saveWorkouts(); refresh(); toast(`Added ${s.exercise} ✓`);
+    };
+    out.appendChild(card);
+  });
+
+  const all = el('button', 'btn', '+ Add all to today');
+  all.style.marginTop = '4px';
+  all.onclick = () => {
+    const t = getToday();
+    (data.suggestions || []).forEach(s => t.entries.push({ id: uid(), name: s.exercise, weight: s.weight || 0, reps: s.reps || 0, sets: s.sets || 0 }));
+    saveWorkouts(); refresh(); switchTab('log'); toast('Session added ✓');
+  };
+  out.appendChild(all);
+}
+
+/* ============================ SETTINGS ============================ */
+function renderUnitSeg() {
+  document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('on', b.dataset.unit === unit));
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify({ app: 'liftr', version: 1, unit, workouts }, null, 2)], { type: 'application/json' });
+  const a = el('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `liftr-backup-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Exported ✓');
+}
+function importData(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!Array.isArray(d.workouts)) throw new Error('bad file');
+      workouts = d.workouts;
+      if (d.unit === 'lb' || d.unit === 'kg') { unit = d.unit; localStorage.setItem(LS.unit, unit); renderUnitSeg(); }
+      saveWorkouts(); refresh(); toast('Imported ✓');
+    } catch { toast('Could not read that file', true); }
+  };
+  r.readAsText(file);
+}
+
+/* ============================ NAV / HELPERS ============================ */
+const TABS = { log: 'Tracker', history: 'History', coach: 'AI Coach', settings: 'Settings' };
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $('#headTag').textContent = TABS[tab] || 'Tracker';
+  document.querySelector('main').scrollTop = 0;
+  if (tab === 'history') renderHistory();
+}
+
+function refresh() { renderToday(); refreshDatalist(); }
+
+let toastT;
+function toast(msg, err) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.className = '', 1900);
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+/* ============================ WIRE UP ============================ */
+$('#addBtn').onclick = addExercise;
+$('#inSets').addEventListener('keydown', e => { if (e.key === 'Enter') addExercise(); });
+$('#coachBtn').onclick = getSuggestions;
+$('#exportBtn').onclick = exportData;
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = e => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ''; };
+$('#clearBtn').onclick = () => {
+  if (confirm('Delete all workouts? This cannot be undone.')) { workouts = []; saveWorkouts(); refresh(); toast('All data cleared'); }
+};
+$('#saveKey').onclick = () => {
+  localStorage.setItem(LS.key, $('#apiKey').value.trim());
+  toast($('#apiKey').value.trim() ? 'Key saved ✓' : 'Key cleared');
+};
+document.querySelectorAll('#unitSeg button').forEach(b => b.onclick = () => {
+  unit = b.dataset.unit; localStorage.setItem(LS.unit, unit); renderUnitSeg(); refresh(); renderHistory();
+});
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+/* ============================ INIT ============================ */
+$('#headDate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+$('#apiKey').value = localStorage.getItem(LS.key) || '';
+renderUnitSeg();
+refresh();
 </script>
 </body>
 </html>

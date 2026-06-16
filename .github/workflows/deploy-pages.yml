@@ -4,7 +4,7 @@ name: Deploy to GitHub Pages
 # there on every push so the live site stays up to date.
 on:
   push:
-    branches: ["claude/3d-blackjack-mobile-dd0yb1"]
+    branches: ["claude/workout-tracker-claude-suggestions-1arhi3"]
   workflow_dispatch:
 
 permissions:
